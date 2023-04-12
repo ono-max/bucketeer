@@ -4,7 +4,6 @@ on:
 
 jobs:
   dependabot:
-    name: Auto merge Dependabot PR
     runs-on: ubuntu-latest
     if: ${{ github.actor == 'dependabot[bot]' }}
     permissions:
