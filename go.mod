@@ -22,7 +22,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/googleapis/gax-go/v2 v2.8.0
 	github.com/itchyny/gojq v0.12.5
-	github.com/lib/pq v1.10.8
+	github.com/lib/pq v1.10.9
 	github.com/mna/redisc v1.3.2
 	github.com/nicksnyder/go-i18n/v2 v2.2.1
 	github.com/prometheus/client_golang v1.15.0
