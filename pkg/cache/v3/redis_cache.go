@@ -42,8 +42,8 @@ func (r *redisCache) Get(key interface{}) (interface{}, error) {
 	return value, nil
 }
 
-func (r *redisCache) Put(key interface{}, value interface{}) error {
-	return r.client.Set(key.(string), value, 0)
+func (r *redisCache) Put(key interface{}, value interface{}, expiration time.Duration) error {
+	return r.client.Set(key.(string), value, expiration)
 }
 
 func (r *redisCache) GetMulti(keys interface{}) ([]interface{}, error) {
@@ -82,6 +82,10 @@ func (r *redisCache) Increment(key string) (int64, error) {
 
 func (r *redisCache) PFCount(keys ...string) (int64, error) {
 	return r.client.PFCount(keys...)
+}
+
+func (r *redisCache) PFMerge(dest string, keys ...string) error {
+	return r.client.PFMerge(dest, keys...)
 }
 
 func (r *redisCache) PFAdd(key string, els ...string) (int64, error) {

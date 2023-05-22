@@ -1858,6 +1858,26 @@
                 "integer": 5
               }
             ]
+          },
+          {
+            "name": "ProgressiveRolloutTemplateScheduleClause.Interval",
+            "enum_fields": [
+              {
+                "name": "UNKNOWN"
+              },
+              {
+                "name": "HOURLY",
+                "integer": 1
+              },
+              {
+                "name": "DAILY",
+                "integer": 2
+              },
+              {
+                "name": "WEEKLY",
+                "integer": 3
+              }
+            ]
           }
         ],
         "messages": [
@@ -1954,6 +1974,73 @@
                     "type": "Operator"
                   }
                 ]
+              }
+            ]
+          },
+          {
+            "name": "ProgressiveRolloutSchedule",
+            "fields": [
+              {
+                "id": 1,
+                "name": "schedule_id",
+                "type": "string"
+              },
+              {
+                "id": 2,
+                "name": "execute_at",
+                "type": "int64"
+              },
+              {
+                "id": 3,
+                "name": "weight",
+                "type": "int32"
+              },
+              {
+                "id": 4,
+                "name": "triggered_at",
+                "type": "int64"
+              }
+            ]
+          },
+          {
+            "name": "ProgressiveRolloutManualScheduleClause",
+            "fields": [
+              {
+                "id": 1,
+                "name": "schedules",
+                "type": "ProgressiveRolloutSchedule",
+                "is_repeated": true
+              },
+              {
+                "id": 2,
+                "name": "variation_id",
+                "type": "string"
+              }
+            ]
+          },
+          {
+            "name": "ProgressiveRolloutTemplateScheduleClause",
+            "fields": [
+              {
+                "id": 1,
+                "name": "schedules",
+                "type": "ProgressiveRolloutSchedule",
+                "is_repeated": true
+              },
+              {
+                "id": 2,
+                "name": "interval",
+                "type": "Interval"
+              },
+              {
+                "id": 3,
+                "name": "increments",
+                "type": "int64"
+              },
+              {
+                "id": 4,
+                "name": "variation_id",
+                "type": "string"
               }
             ]
           }
@@ -2149,6 +2236,59 @@
                 "type": "WebhookClause"
               }
             ]
+          },
+          {
+            "name": "CreateProgressiveRolloutCommand",
+            "fields": [
+              {
+                "id": 1,
+                "name": "feature_id",
+                "type": "string"
+              },
+              {
+                "id": 2,
+                "name": "progressive_rollout_manual_schedule_clause",
+                "type": "ProgressiveRolloutManualScheduleClause"
+              },
+              {
+                "id": 3,
+                "name": "progressive_rollout_template_schedule_clause",
+                "type": "ProgressiveRolloutTemplateScheduleClause"
+              }
+            ]
+          },
+          {
+            "name": "DeleteProgressiveRolloutCommand"
+          },
+          {
+            "name": "AddProgressiveRolloutManualScheduleClauseCommand",
+            "fields": [
+              {
+                "id": 1,
+                "name": "clause",
+                "type": "ProgressiveRolloutManualScheduleClause"
+              }
+            ]
+          },
+          {
+            "name": "AddProgressiveRolloutTemplateScheduleClauseCommand",
+            "fields": [
+              {
+                "id": 1,
+                "name": "clause",
+                "type": "ProgressiveRolloutTemplateScheduleClause"
+              }
+            ]
+          },
+          {
+            "name": "ChangeProgressiveRolloutScheduleTriggeredAtCommand",
+            "fields": [
+              {
+                "id": 1,
+                "name": "schedule_id",
+                "type": "string"
+              }
+            ]
           }
         ],
         "imports": [
@@ -2227,6 +2367,97 @@
       }
     },
     {
+      "protopath": "autoops:/:progressive_rollout.proto",
+      "def": {
+        "enums": [
+          {
+            "name": "ProgressiveRollout.Type",
+            "enum_fields": [
+              {
+                "name": "MANUAL_SCHEDULE"
+              },
+              {
+                "name": "TEMPLATE_SCHEDULE",
+                "integer": 1
+              }
+            ]
+          },
+          {
+            "name": "ProgressiveRollout.Status",
+            "enum_fields": [
+              {
+                "name": "WAITING"
+              },
+              {
+                "name": "RUNNING",
+                "integer": 1
+              },
+              {
+                "name": "FINISHED",
+                "integer": 2
+              }
+            ]
+          }
+        ],
+        "messages": [
+          {
+            "name": "ProgressiveRollout",
+            "fields": [
+              {
+                "id": 1,
+                "name": "id",
+                "type": "string"
+              },
+              {
+                "id": 2,
+                "name": "feature_id",
+                "type": "string"
+              },
+              {
+                "id": 3,
+                "name": "clause",
+                "type": "google.protobuf.Any"
+              },
+              {
+                "id": 4,
+                "name": "status",
+                "type": "Status"
+              },
+              {
+                "id": 5,
+                "name": "created_at",
+                "type": "int64"
+              },
+              {
+                "id": 6,
+                "name": "updated_at",
+                "type": "int64"
+              },
+              {
+                "id": 7,
+                "name": "type",
+                "type": "Type"
+              }
+            ]
+          }
+        ],
+        "imports": [
+          {
+            "path": "google/protobuf/any.proto"
+          }
+        ],
+        "package": {
+          "name": "bucketeer.autoops"
+        },
+        "options": [
+          {
+            "name": "go_package",
+            "value": "github.com/bucketeer-io/bucketeer/proto/autoops"
+          }
+        ]
+      }
+    },
+    {
       "protopath": "autoops:/:service.proto",
       "def": {
         "enums": [
@@ -2252,6 +2483,34 @@
           },
           {
             "name": "ListWebhooksRequest.OrderDirection",
+            "enum_fields": [
+              {
+                "name": "ASC"
+              },
+              {
+                "name": "DESC",
+                "integer": 1
+              }
+            ]
+          },
+          {
+            "name": "ListProgressiveRolloutRequest.OrderBy",
+            "enum_fields": [
+              {
+                "name": "DEFAULT"
+              },
+              {
+                "name": "CREATED_AT",
+                "integer": 1
+              },
+              {
+                "name": "UPDATED_AT",
+                "integer": 2
+              }
+            ]
+          },
+          {
+            "name": "ListProgressiveRolloutRequest.OrderDirection",
             "enum_fields": [
               {
                 "name": "ASC"
@@ -2681,6 +2940,167 @@
                 "type": "int64"
               }
             ]
+          },
+          {
+            "name": "CreateProgressiveRolloutRequest",
+            "fields": [
+              {
+                "id": 1,
+                "name": "environment_namespace",
+                "type": "string"
+              },
+              {
+                "id": 2,
+                "name": "command",
+                "type": "CreateProgressiveRolloutCommand"
+              }
+            ]
+          },
+          {
+            "name": "CreateProgressiveRolloutResponse"
+          },
+          {
+            "name": "GetProgressiveRolloutRequest",
+            "fields": [
+              {
+                "id": 1,
+                "name": "environment_namespace",
+                "type": "string"
+              },
+              {
+                "id": 2,
+                "name": "id",
+                "type": "string"
+              }
+            ]
+          },
+          {
+            "name": "GetProgressiveRolloutResponse",
+            "fields": [
+              {
+                "id": 1,
+                "name": "progressive_rollout",
+                "type": "ProgressiveRollout"
+              }
+            ]
+          },
+          {
+            "name": "DeleteProgressiveRolloutRequest",
+            "fields": [
+              {
+                "id": 1,
+                "name": "environment_namespace",
+                "type": "string"
+              },
+              {
+                "id": 2,
+                "name": "id",
+                "type": "string"
+              },
+              {
+                "id": 3,
+                "name": "command",
+                "type": "DeleteProgressiveRolloutCommand"
+              }
+            ]
+          },
+          {
+            "name": "DeleteProgressiveRolloutResponse"
+          },
+          {
+            "name": "ListProgressiveRolloutRequest",
+            "fields": [
+              {
+                "id": 1,
+                "name": "environment_namespace",
+                "type": "string"
+              },
+              {
+                "id": 2,
+                "name": "page_size",
+                "type": "int64"
+              },
+              {
+                "id": 3,
+                "name": "cursor",
+                "type": "string"
+              },
+              {
+                "id": 4,
+                "name": "feature_ids",
+                "type": "string",
+                "is_repeated": true
+              },
+              {
+                "id": 5,
+                "name": "order_by",
+                "type": "OrderBy"
+              },
+              {
+                "id": 6,
+                "name": "order_direction",
+                "type": "OrderDirection"
+              },
+              {
+                "id": 7,
+                "name": "status",
+                "type": "ProgressiveRollout.Status"
+              },
+              {
+                "id": 8,
+                "name": "search_keyword",
+                "type": "string"
+              },
+              {
+                "id": 9,
+                "name": "type",
+                "type": "ProgressiveRollout.Type"
+              }
+            ]
+          },
+          {
+            "name": "ListProgressiveRolloutResponse",
+            "fields": [
+              {
+                "id": 1,
+                "name": "progressive_rollouts",
+                "type": "ProgressiveRollout",
+                "is_repeated": true
+              },
+              {
+                "id": 2,
+                "name": "cursor",
+                "type": "string"
+              },
+              {
+                "id": 3,
+                "name": "total_count",
+                "type": "int64"
+              }
+            ]
+          },
+          {
+            "name": "ExecuteProgressiveRolloutRequest",
+            "fields": [
+              {
+                "id": 1,
+                "name": "environment_namespace",
+                "type": "string"
+              },
+              {
+                "id": 2,
+                "name": "id",
+                "type": "string"
+              },
+              {
+                "id": 3,
+                "name": "change_progressive_rollout_triggered_at_command",
+                "type": "ChangeProgressiveRolloutScheduleTriggeredAtCommand"
+              }
+            ]
+          },
+          {
+            "name": "ExecuteProgressiveRolloutResponse"
           }
         ],
         "services": [
@@ -2762,6 +3182,9 @@
           },
           {
             "path": "proto/autoops/webhook.proto"
+          },
+          {
+            "path": "proto/autoops/progressive_rollout.proto"
           }
         ],
         "package": {
@@ -7766,6 +8189,32 @@
     {
       "protopath": "eventcounter:/:service.proto",
       "def": {
+        "enums": [
+          {
+            "name": "GetEvaluationTimeseriesCountRequest.TimeRange",
+            "enum_fields": [
+              {
+                "name": "UNKNOWN"
+              },
+              {
+                "name": "TWENTY_FOUR_HOURS",
+                "integer": 1
+              },
+              {
+                "name": "SEVEN_DAYS",
+                "integer": 2
+              },
+              {
+                "name": "FOURTEEN_DAYS",
+                "integer": 3
+              },
+              {
+                "name": "THIRTY_DAYS",
+                "integer": 4
+              }
+            ]
+          }
+        ],
         "messages": [
           {
             "name": "GetExperimentEvaluationCountRequest",
@@ -7836,6 +8285,11 @@
                 "id": 2,
                 "name": "feature_id",
                 "type": "string"
+              },
+              {
+                "id": 3,
+                "name": "time_range",
+                "type": "TimeRange"
               }
             ]
           },
@@ -8187,6 +8641,20 @@
     {
       "protopath": "eventcounter:/:timeseries.proto",
       "def": {
+        "enums": [
+          {
+            "name": "Timeseries.Unit",
+            "enum_fields": [
+              {
+                "name": "HOUR"
+              },
+              {
+                "name": "DAY",
+                "integer": 1
+              }
+            ]
+          }
+        ],
         "messages": [
           {
             "name": "VariationTimeseries",
@@ -8217,6 +8685,16 @@
                 "name": "values",
                 "type": "double",
                 "is_repeated": true
+              },
+              {
+                "id": 3,
+                "name": "unit",
+                "type": "Unit"
+              },
+              {
+                "id": 4,
+                "name": "total_counts",
+                "type": "int64"
               }
             ]
           }
@@ -10445,7 +10923,13 @@
               {
                 "id": 1,
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "options": [
+                  {
+                    "name": "deprecated",
+                    "value": "true"
+                  }
+                ]
               },
               {
                 "id": 2,
@@ -10457,6 +10941,17 @@
                 "id": 3,
                 "name": "created_at",
                 "type": "int64"
+              },
+              {
+                "id": 4,
+                "name": "archived_feature_ids",
+                "type": "string",
+                "is_repeated": true
+              },
+              {
+                "id": 5,
+                "name": "force_update",
+                "type": "bool"
               }
             ]
           }
@@ -12497,6 +12992,16 @@
                 "id": 5,
                 "name": "source_id",
                 "type": "bucketeer.event.client.SourceId"
+              },
+              {
+                "id": 6,
+                "name": "evaluated_at",
+                "type": "int64"
+              },
+              {
+                "id": 7,
+                "name": "user_attributes_updated",
+                "type": "bool"
               }
             ]
           },
@@ -14415,160 +14920,6 @@
           {
             "name": "go_package",
             "value": "github.com/bucketeer-io/bucketeer/proto/test"
-          }
-        ]
-      }
-    },
-    {
-      "protopath": "user:/:service.proto",
-      "def": {
-        "enums": [
-          {
-            "name": "ListUsersRequest.OrderBy",
-            "enum_fields": [
-              {
-                "name": "DEFAULT"
-              },
-              {
-                "name": "CREATED_AT",
-                "integer": 1
-              },
-              {
-                "name": "LAST_SEEN",
-                "integer": 2
-              }
-            ]
-          },
-          {
-            "name": "ListUsersRequest.OrderDirection",
-            "enum_fields": [
-              {
-                "name": "ASC"
-              },
-              {
-                "name": "DESC",
-                "integer": 1
-              }
-            ]
-          }
-        ],
-        "messages": [
-          {
-            "name": "GetUserRequest",
-            "fields": [
-              {
-                "id": 1,
-                "name": "user_id",
-                "type": "string"
-              },
-              {
-                "id": 2,
-                "name": "environment_namespace",
-                "type": "string"
-              }
-            ]
-          },
-          {
-            "name": "GetUserResponse",
-            "fields": [
-              {
-                "id": 1,
-                "name": "user",
-                "type": "User"
-              }
-            ]
-          },
-          {
-            "name": "ListUsersRequest",
-            "fields": [
-              {
-                "id": 1,
-                "name": "environment_namespace",
-                "type": "string"
-              },
-              {
-                "id": 2,
-                "name": "page_size",
-                "type": "int64"
-              },
-              {
-                "id": 3,
-                "name": "cursor",
-                "type": "string"
-              },
-              {
-                "id": 4,
-                "name": "order_by",
-                "type": "OrderBy"
-              },
-              {
-                "id": 5,
-                "name": "order_direction",
-                "type": "OrderDirection"
-              },
-              {
-                "id": 6,
-                "name": "search_keyword",
-                "type": "string"
-              },
-              {
-                "id": 7,
-                "name": "from",
-                "type": "int64"
-              },
-              {
-                "id": 8,
-                "name": "to",
-                "type": "int64"
-              }
-            ]
-          },
-          {
-            "name": "ListUsersResponse",
-            "fields": [
-              {
-                "id": 1,
-                "name": "users",
-                "type": "User",
-                "is_repeated": true
-              },
-              {
-                "id": 2,
-                "name": "cursor",
-                "type": "string"
-              }
-            ]
-          }
-        ],
-        "services": [
-          {
-            "name": "UserService",
-            "rpcs": [
-              {
-                "name": "GetUser",
-                "in_type": "GetUserRequest",
-                "out_type": "GetUserResponse"
-              },
-              {
-                "name": "ListUsers",
-                "in_type": "ListUsersRequest",
-                "out_type": "ListUsersResponse"
-              }
-            ]
-          }
-        ],
-        "imports": [
-          {
-            "path": "proto/user/user.proto"
-          }
-        ],
-        "package": {
-          "name": "bucketeer.user"
-        },
-        "options": [
-          {
-            "name": "go_package",
-            "value": "github.com/bucketeer-io/bucketeer/proto/user"
           }
         ]
       }

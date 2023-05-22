@@ -620,6 +620,24 @@ func (s *FeatureService) CreateFeature(
 		}
 		return nil, dt.Err()
 	}
+	err = s.refreshFeaturesCache(ctx, req.EnvironmentNamespace)
+	if err != nil {
+		s.logger.Error(
+			"Failed to refresh features cache",
+			log.FieldsFromImcomingContext(ctx).AddFields(
+				zap.Error(err),
+				zap.String("environmentNamespace", req.EnvironmentNamespace),
+			)...,
+		)
+		dt, err := statusInternal.WithDetails(&errdetails.LocalizedMessage{
+			Locale:  localizer.GetLocale(),
+			Message: localizer.MustLocalize(locale.InternalServerError),
+		})
+		if err != nil {
+			return nil, statusInternal.Err()
+		}
+		return nil, dt.Err()
+	}
 	if errs := s.publishDomainEvents(ctx, handler.Events); len(errs) > 0 {
 		s.logger.Error(
 			"Failed to publish events",
@@ -801,6 +819,24 @@ func (s *FeatureService) UpdateFeatureDetails(
 	})
 	if err != nil {
 		return nil, err
+	}
+	err = s.refreshFeaturesCache(ctx, req.EnvironmentNamespace)
+	if err != nil {
+		s.logger.Error(
+			"Failed to refresh features cache",
+			log.FieldsFromImcomingContext(ctx).AddFields(
+				zap.Error(err),
+				zap.String("environmentNamespace", req.EnvironmentNamespace),
+			)...,
+		)
+		dt, err := statusInternal.WithDetails(&errdetails.LocalizedMessage{
+			Locale:  localizer.GetLocale(),
+			Message: localizer.MustLocalize(locale.InternalServerError),
+		})
+		if err != nil {
+			return nil, statusInternal.Err()
+		}
+		return nil, dt.Err()
 	}
 	if errs := s.publishDomainEvents(ctx, handler.Events); len(errs) > 0 {
 		s.logger.Error(
@@ -1112,6 +1148,24 @@ func (s *FeatureService) updateFeature(
 	if err != nil {
 		return s.convUpdateFeatureError(err, localizer)
 	}
+	err = s.refreshFeaturesCache(ctx, environmentNamespace)
+	if err != nil {
+		s.logger.Error(
+			"Failed to refresh features cache",
+			log.FieldsFromImcomingContext(ctx).AddFields(
+				zap.Error(err),
+				zap.String("environmentNamespace", environmentNamespace),
+			)...,
+		)
+		dt, err := statusInternal.WithDetails(&errdetails.LocalizedMessage{
+			Locale:  localizer.GetLocale(),
+			Message: localizer.MustLocalize(locale.InternalServerError),
+		})
+		if err != nil {
+			return statusInternal.Err()
+		}
+		return dt.Err()
+	}
 	if errs := s.publishDomainEvents(ctx, handler.Events); len(errs) > 0 {
 		s.logger.Error(
 			"Failed to publish events",
@@ -1337,6 +1391,24 @@ func (s *FeatureService) UpdateFeatureVariations(
 	if err != nil {
 		return nil, err
 	}
+	err = s.refreshFeaturesCache(ctx, req.EnvironmentNamespace)
+	if err != nil {
+		s.logger.Error(
+			"Failed to refresh features cache",
+			log.FieldsFromImcomingContext(ctx).AddFields(
+				zap.Error(err),
+				zap.String("environmentNamespace", req.EnvironmentNamespace),
+			)...,
+		)
+		dt, err := statusInternal.WithDetails(&errdetails.LocalizedMessage{
+			Locale:  localizer.GetLocale(),
+			Message: localizer.MustLocalize(locale.InternalServerError),
+		})
+		if err != nil {
+			return nil, statusInternal.Err()
+		}
+		return nil, dt.Err()
+	}
 	if errs := s.publishDomainEvents(ctx, handler.Events); len(errs) > 0 {
 		s.logger.Error(
 			"Failed to publish events",
@@ -1537,6 +1609,24 @@ func (s *FeatureService) UpdateFeatureTargeting(
 	})
 	if err != nil {
 		return nil, err
+	}
+	err = s.refreshFeaturesCache(ctx, req.EnvironmentNamespace)
+	if err != nil {
+		s.logger.Error(
+			"Failed to refresh features cache",
+			log.FieldsFromImcomingContext(ctx).AddFields(
+				zap.Error(err),
+				zap.String("environmentNamespace", req.EnvironmentNamespace),
+			)...,
+		)
+		dt, err := statusInternal.WithDetails(&errdetails.LocalizedMessage{
+			Locale:  localizer.GetLocale(),
+			Message: localizer.MustLocalize(locale.InternalServerError),
+		})
+		if err != nil {
+			return nil, statusInternal.Err()
+		}
+		return nil, dt.Err()
 	}
 	if errs := s.publishDomainEvents(ctx, handler.Events); len(errs) > 0 {
 		s.logger.Error(
@@ -2087,6 +2177,24 @@ func (s *FeatureService) CloneFeature(
 		}
 		return nil, dt.Err()
 	}
+	err = s.refreshFeaturesCache(ctx, req.EnvironmentNamespace)
+	if err != nil {
+		s.logger.Error(
+			"Failed to refresh features cache",
+			log.FieldsFromImcomingContext(ctx).AddFields(
+				zap.Error(err),
+				zap.String("environmentNamespace", req.EnvironmentNamespace),
+			)...,
+		)
+		dt, err := statusInternal.WithDetails(&errdetails.LocalizedMessage{
+			Locale:  localizer.GetLocale(),
+			Message: localizer.MustLocalize(locale.InternalServerError),
+		})
+		if err != nil {
+			return nil, statusInternal.Err()
+		}
+		return nil, dt.Err()
+	}
 	if errs := s.publishDomainEvents(ctx, handler.Events); len(errs) > 0 {
 		s.logger.Error(
 			"Failed to publish events",
@@ -2105,4 +2213,47 @@ func (s *FeatureService) CloneFeature(
 		return nil, dt.Err()
 	}
 	return &featureproto.CloneFeatureResponse{}, nil
+}
+
+func (s *FeatureService) refreshFeaturesCache(ctx context.Context, environmentNamespace string) error {
+	fs, _, _, err := s.listFeatures(
+		ctx,
+		mysql.QueryNoLimit,
+		"",
+		nil,
+		"",
+		nil,
+		nil,
+		nil,
+		"",
+		featureproto.ListFeaturesRequest_DEFAULT,
+		featureproto.ListFeaturesRequest_ASC,
+		environmentNamespace,
+	)
+	if err != nil {
+		return err
+	}
+	filtered := make([]*featureproto.Feature, 0)
+	for _, f := range fs {
+		ff := domain.Feature{Feature: f}
+		if ff.IsDisabledAndOffVariationEmpty() {
+			continue
+		}
+		// To keep the cache size small, we exclude feature flags archived more than thirty days ago.
+		if ff.IsArchivedBeforeLastThirtyDays() {
+			continue
+		}
+		filtered = append(filtered, f)
+	}
+	features := &featureproto.Features{
+		Features: filtered,
+	}
+	if err := s.featuresCache.Put(features, environmentNamespace); err != nil {
+		return err
+	}
+	s.logger.Info("Success to refresh features cache",
+		zap.String("environmentNamespace", environmentNamespace),
+		zap.Int("numberOfFeatures", len(fs)),
+	)
+	return nil
 }

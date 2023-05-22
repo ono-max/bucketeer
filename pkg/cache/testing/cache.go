@@ -42,7 +42,7 @@ func (c *inMemoryCache) Get(key interface{}) (interface{}, error) {
 	return nil, cache.ErrNotFound
 }
 
-func (c *inMemoryCache) Put(key interface{}, value interface{}) error {
+func (c *inMemoryCache) Put(key interface{}, value interface{}, expiration time.Duration) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	c.data[key] = value
@@ -88,6 +88,11 @@ func (c *inMemoryCache) PFAdd(key string, els ...string) (int64, error) {
 func (c *inMemoryCache) PFCount(keys ...string) (int64, error) {
 	// TODO: implement
 	return 0, nil
+}
+
+func (c *inMemoryCache) PFMerge(dest string, keys ...string) error {
+	// TODO: implement
+	return nil
 }
 
 func (c *inMemoryCache) Expire(key string, expiration time.Duration) (bool, error) {

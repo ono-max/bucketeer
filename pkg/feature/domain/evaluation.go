@@ -16,6 +16,7 @@ package domain
 
 import (
 	"fmt"
+	"time"
 
 	featureproto "github.com/bucketeer-io/bucketeer/proto/feature"
 	userproto "github.com/bucketeer-io/bucketeer/proto/user"
@@ -81,8 +82,111 @@ func EvaluateFeatures(
 		}
 		evaluations = append(evaluations, evaluation)
 	}
+	// FIXME: Remove id once all SDKs will be updated.
 	id := UserEvaluationsID(user.Id, user.Data, fs)
-	userEvaluations := NewUserEvaluations(id, evaluations)
+	userEvaluations := NewUserEvaluations(id, evaluations, []string{}, false)
+	return userEvaluations.UserEvaluations, nil
+}
+
+func EvaluateFeaturesByEvaluatedAt(
+	fs []*featureproto.Feature,
+	user *userproto.User,
+	mapSegmentUsers map[string][]*featureproto.SegmentUser,
+	prevUEID string,
+	evaluatedAt int64,
+	userAttributesUpdated bool,
+	targetTag string,
+) (*featureproto.UserEvaluations, error) {
+	if prevUEID == "" {
+		return evaluate(fs, user, mapSegmentUsers, true, targetTag)
+	}
+	now := time.Now()
+	if evaluatedAt < now.Unix()-secondsToReEvaluateAll {
+		return evaluate(fs, user, mapSegmentUsers, true, targetTag)
+	}
+	adjustedEvalAt := evaluatedAt - secondsForAdjustment
+	updatedFeatures := make([]*featureproto.Feature, 0, len(fs))
+	for _, f := range fs {
+		feature := &Feature{Feature: f}
+		if feature.UpdatedAt > adjustedEvalAt {
+			updatedFeatures = append(updatedFeatures, f)
+			continue
+		}
+		if userAttributesUpdated && len(feature.Rules) != 0 {
+			updatedFeatures = append(updatedFeatures, f)
+		}
+	}
+	// If the UserEvaluationsID has changed, but both User Attributes and Feature Flags have not been updated,
+	// it is considered unusual and a force update should be performed.
+	if len(updatedFeatures) == 0 {
+		return evaluate(fs, user, mapSegmentUsers, true, targetTag)
+	}
+	featuresHavePrerequisite := getFeaturesHavePrerequisite(fs)
+	evalTargets := GetPrerequisiteUpwards(updatedFeatures, featuresHavePrerequisite)
+	return evaluate(evalTargets, user, mapSegmentUsers, false, targetTag)
+}
+
+func evaluate(
+	fs []*featureproto.Feature,
+	user *userproto.User,
+	mapSegmentUsers map[string][]*featureproto.SegmentUser,
+	forceUpdate bool,
+	targetTag string,
+) (*featureproto.UserEvaluations, error) {
+	flagVariations := map[string]string{}
+	// fs need to be sorted in order from upstream to downstream.
+	sortedFs, err := TopologicalSort(fs)
+	if err != nil {
+		return nil, err
+	}
+	evaluations := make([]*featureproto.Evaluation, 0, len(fs))
+	archivedIDs := make([]string, 0)
+	for _, f := range sortedFs {
+		feature := &Feature{Feature: f}
+		if feature.Archived {
+			// To keep response size small, the feature flags archived long time ago are excluded.
+			if !feature.IsArchivedBeforeLastThirtyDays() {
+				archivedIDs = append(archivedIDs, f.Id)
+			}
+			continue
+		}
+		var segmentUsers []*featureproto.SegmentUser
+		for _, id := range feature.ListSegmentIDs() {
+			segmentUsers = append(segmentUsers, mapSegmentUsers[id]...)
+		}
+		reason, variation, err := feature.assignUser(user, segmentUsers, flagVariations)
+		if err != nil {
+			return nil, err
+		}
+		// VariationId is used to check if prerequisite flag's result is what user expects it to be.
+		flagVariations[f.Id] = variation.Id
+		// When the tag is set in the request,
+		// it will return only the evaluations of flags that match the tag configured on the dashboard.
+		// When empty, it will return all the evaluations of the flags in the environment.
+		if targetTag != "" && !tagExist(f.Tags, targetTag) {
+			continue
+		}
+		// FIXME: Remove the next two lines when the Variation
+		// no longer is being used
+		// For security reasons, it removes the variation name and description
+		variation.Name = ""
+		variation.Description = ""
+		evaluationID := EvaluationID(f.Id, f.Version, user.Id)
+		evaluation := &featureproto.Evaluation{
+			Id:             evaluationID,
+			FeatureId:      f.Id,
+			FeatureVersion: f.Version,
+			UserId:         user.Id,
+			VariationId:    variation.Id,
+			VariationValue: variation.Value,
+			Variation:      variation, // deprecated
+			Reason:         reason,
+		}
+		evaluations = append(evaluations, evaluation)
+	}
+	// FIXME: Remove id once all SDKs will be updated.
+	id := UserEvaluationsID(user.Id, user.Data, fs)
+	userEvaluations := NewUserEvaluations(id, evaluations, archivedIDs, forceUpdate)
 	return userEvaluations.UserEvaluations, nil
 }
 
@@ -136,4 +240,105 @@ func TopologicalSort(features []*featureproto.Feature) ([]*featureproto.Feature,
 		}
 	}
 	return sortedFeatures, nil
+}
+
+/*
+GetPrerequisiteDownwards gets the features specified as prerequisite by the targetFeatures.
+*/
+func GetPrerequisiteDownwards(
+	targetFeatures, allFeatures []*featureproto.Feature,
+) ([]*featureproto.Feature, error) {
+	allFeaturesMap := make(map[string]*featureproto.Feature, len(allFeatures))
+	for _, f := range allFeatures {
+		allFeaturesMap[f.Id] = f
+	}
+	prerequisites := make(map[string]*featureproto.Feature)
+	// depth first search
+	queue := append([]*featureproto.Feature{}, targetFeatures...)
+	for len(queue) > 0 {
+		f := queue[0]
+		for _, p := range f.Prerequisites {
+			preFeature, ok := allFeaturesMap[p.FeatureId]
+			if !ok {
+				return nil, errFeatureNotFound
+			}
+			prerequisites[preFeature.Id] = preFeature
+			queue = append(queue, preFeature)
+		}
+		queue = queue[1:]
+	}
+	return getPrerequisiteResult(targetFeatures, prerequisites), nil
+}
+
+/*
+GetPrerequisiteUpwards gets the features that have the specified targetFeatures as the prerequisite.
+*/
+func GetPrerequisiteUpwards( // nolint:unused
+	targetFeatures, featuresHavePrerequisite []*featureproto.Feature,
+) []*featureproto.Feature {
+	upwardsFeatures := make(map[string]*featureproto.Feature)
+	// depth first search
+	queue := append([]*featureproto.Feature{}, targetFeatures...)
+	for len(queue) > 0 {
+		f := queue[0]
+		for _, newTarget := range featuresHavePrerequisite {
+			for _, p := range newTarget.Prerequisites {
+				if p.FeatureId == f.Id {
+					if _, ok := upwardsFeatures[newTarget.Id]; ok {
+						continue
+					}
+					upwardsFeatures[newTarget.Id] = newTarget
+					queue = append(queue, newTarget)
+				}
+			}
+		}
+		queue = queue[1:]
+	}
+	return getPrerequisiteResult(targetFeatures, upwardsFeatures)
+}
+
+func getPrerequisiteResult(
+	targetFeatures []*featureproto.Feature,
+	featuresDependencies map[string]*featureproto.Feature,
+) []*featureproto.Feature {
+	if len(featuresDependencies) == 0 {
+		return targetFeatures
+	}
+	targetFeaturesMap := make(map[string]*featureproto.Feature, len(targetFeatures))
+	for _, f := range targetFeatures {
+		targetFeaturesMap[f.Id] = f
+	}
+	merged := mapMerge(targetFeaturesMap, featuresDependencies)
+	result := make([]*featureproto.Feature, 0, len(merged))
+	for _, v := range merged {
+		result = append(result, v)
+	}
+	return result
+}
+
+func mapMerge(m1, m2 map[string]*featureproto.Feature) map[string]*featureproto.Feature {
+	for k, v := range m2 {
+		m1[k] = v
+	}
+	return m1
+}
+
+func getFeaturesHavePrerequisite(
+	fs []*featureproto.Feature,
+) []*featureproto.Feature {
+	featuresHavePrerequisite := make(map[string]*featureproto.Feature)
+	for _, f := range fs {
+		if len(f.Prerequisites) == 0 {
+			continue
+		}
+		if _, ok := featuresHavePrerequisite[f.Id]; ok {
+			continue
+		}
+		featuresHavePrerequisite[f.Id] = f
+	}
+	result := make([]*featureproto.Feature, 0, len(featuresHavePrerequisite))
+	for _, v := range featuresHavePrerequisite {
+		result = append(result, v)
+	}
+	return result
 }

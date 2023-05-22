@@ -55,9 +55,6 @@ spec:
         - name: envoy-push-descriptor-secret
           secret:
             secretName: {{ template "web-gateway.fullname" . }}-push
-        - name: envoy-user-descriptor-secret
-          secret:
-            secretName: {{ template "web-gateway.fullname" . }}-user
         - name: envoy-migration-descriptor-secret
           secret:
             secretName: {{ template "web-gateway.fullname" . }}-migration
@@ -77,8 +74,7 @@ spec:
                 command:
                   - "/bin/sh"
                   - "-c"
-                  - "while [ $(netstat -plunt | grep tcp | grep -v envoy | wc -l) -ne 0 ]; do sleep 1; done;"
-                  - "sleep 10;"
+                  - "sleep 15;"
           command: ["envoy"]
           args:
             - "-c"
@@ -121,9 +117,6 @@ spec:
               readOnly: true
             - name: envoy-push-descriptor-secret
               mountPath: /usr/local/push-secret
-              readOnly: true
-            - name: envoy-user-descriptor-secret
-              mountPath: /usr/local/user-secret
               readOnly: true
             - name: envoy-migration-descriptor-secret
               mountPath: /usr/local/migration-secret
