@@ -1,17 +1,15 @@
 name: Dependabot auto-merge
-on:
-  workflow_run:
-    workflows: [pr-title-validation]
-    types:
-      - completed
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+  repository-projects: write
 
 jobs:
   dependabot:
     runs-on: ubuntu-latest
     if: ${{ github.actor == 'dependabot[bot]' }}
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
       - name: Wait for other checks to succeed
         uses: lewagon/wait-on-check-action@e106e5c43e8ca1edea6383a39a01c5ca495fd812 # v1.3.1
