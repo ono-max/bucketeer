@@ -20,7 +20,7 @@ require (
 	github.com/golang/protobuf v1.5.3
 	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/google/go-cmp v0.5.9
-	github.com/googleapis/gax-go/v2 v2.8.0
+	github.com/googleapis/gax-go/v2 v2.9.1
 	github.com/itchyny/gojq v0.12.12
 	github.com/lib/pq v1.10.7
 	github.com/mna/redisc v1.1.2
@@ -36,7 +36,7 @@ require (
 	golang.org/x/sync v0.1.0
 	golang.org/x/text v0.9.0
 	golang.org/x/time v0.3.0
-	google.golang.org/api v0.118.0
+	google.golang.org/api v0.123.0
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 	google.golang.org/grpc v1.55.0
 	google.golang.org/protobuf v1.30.0
@@ -80,7 +80,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/pprof v0.0.0-20220412212628-83db2b799d1f // indirect
-	github.com/google/s2a-go v0.1.0 // indirect
+	github.com/google/s2a-go v0.1.3 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
