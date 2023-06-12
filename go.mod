@@ -10,7 +10,7 @@ require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.8.0
 	github.com/VividCortex/mysqlerr v1.0.0
 	github.com/aws/aws-sdk-go-v2/config v1.17.10
-	github.com/aws/aws-sdk-go-v2/service/kms v1.21.1
+	github.com/aws/aws-sdk-go-v2/service/kms v1.22.0
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/go-redis/redis v6.15.9+incompatible
